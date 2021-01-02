@@ -39,7 +39,9 @@
 #include "tiledb/sm/misc/utils.h"
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <unistd.h>
 
 #include <fstream>
 #include <future>
