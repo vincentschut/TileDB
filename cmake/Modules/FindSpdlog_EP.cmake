@@ -28,7 +28,7 @@
 # This module defines:
 #   - SPDLOG_INCLUDE_DIR, directory containing headers
 #   - SPDLOG_FOUND, whether Spdlog has been found
-#   - The spdlog::spdlog_header_only imported target
+#   - The spdlog::spdlog imported target
 
 # First try the CMake find module.
 if (NOT TILEDB_FORCE_ALL_DEPS OR TILEDB_SPDLOG_EP_BUILT)
@@ -57,7 +57,16 @@ if (NOT SPDLOG_FOUND)
       URL_HASH SHA1=970d58ccd9ba0d2f86e3b5c405fedfcb82949906
       CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${TILEDB_EP_INSTALL_PREFIX}
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        -DSPDLOG_BUILD_SHARED=OFF
       LOG_DOWNLOAD TRUE
+      LOG_CONFIGURE TRUE
+      LOG_BUILD TRUE
+      LOG_INSTALL TRUE
       LOG_OUTPUT_ON_FAILURE ${TILEDB_LOG_OUTPUT_ON_FAILURE}
     )
     list(APPEND TILEDB_EXTERNAL_PROJECTS ep_spdlog)
@@ -69,23 +78,23 @@ if (NOT SPDLOG_FOUND)
   endif()
 endif()
 
-if (spdlog_FOUND AND NOT TARGET spdlog::spdlog_header_only)
-  add_library(spdlog::spdlog_header_only INTERFACE IMPORTED)
+if (spdlog_FOUND AND NOT TARGET spdlog::spdlog)
+  add_library(spdlog::spdlog INTERFACE IMPORTED)
   find_package(fmt QUIET)
   if (${fmt_FOUND})
-    target_link_libraries(spdlog::spdlog_header_only INTERFACE fmt::fmt)
+    target_link_libraries(spdlog::spdlog INTERFACE fmt::fmt)
   endif()
-  set_target_properties(spdlog::spdlog_header_only PROPERTIES
-          INTERFACE_INCLUDE_DIRECTORIES "${SPDLOG_INCLUDE_DIR}"
-          )
+  set_target_properties(spdlog::spdlog PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${SPDLOG_INCLUDE_DIR}"
+  )
   # If the target is defined we need to handle external fmt build types
-elseif(TARGET spdlog::spdlog_header_only)
+elseif(TARGET spdlog::spdlog)
   if (SPDLOG_FMT_EXTERNAL)
     # Since we are using header only we need to define this
     add_definitions("-DSPDLOG_FMT_EXTERNAL=1")
     find_package(fmt REQUIRED)
     if (${fmt_FOUND})
-      target_link_libraries(spdlog::spdlog_header_only INTERFACE fmt::fmt)
+      target_link_libraries(spdlog::spdlog INTERFACE fmt::fmt)
     endif()
   endif()
 endif()
