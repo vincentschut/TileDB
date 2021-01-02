@@ -39,6 +39,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 using namespace tiledb::common;
 
