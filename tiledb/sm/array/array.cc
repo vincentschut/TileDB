@@ -200,6 +200,22 @@ Status Array::open(
     return LOG_STATUS(
         Status::ArrayError("Cannot open array; Array already open"));
 
+  std::string encryption_key_from_cfg;
+  if (!encryption_key) {
+    bool found = false;
+    encryption_key_from_cfg = config_.get("sm.encryption_key", &found);
+    assert(found);
+  }
+  if (!encryption_key_from_cfg.empty()) {
+    encryption_key = encryption_key_from_cfg.c_str();
+    std::string encryption_type_from_cfg;
+    bool found = false;
+    encryption_type_from_cfg = config_.get("sm.encryption_type", &found);
+    assert(found);
+    RETURN_NOT_OK(
+        encryption_type_enum(encryption_type_from_cfg, &encryption_type));
+  }
+
   if (remote_ && encryption_type != EncryptionType::NO_ENCRYPTION)
     return LOG_STATUS(Status::ArrayError(
         "Cannot open array; encrypted remote arrays are not supported."));
