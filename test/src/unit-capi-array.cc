@@ -580,13 +580,27 @@ TEST_CASE_METHOD(
         &read_schema);
     REQUIRE(rc == TILEDB_ERR);
     // Check with correct key
-    rc = tiledb_array_schema_load_with_key(
-        ctx_,
-        array_name.c_str(),
-        TILEDB_AES_256_GCM,
-        key,
-        key_len,
-        &read_schema);
+    int rc = tiledb_array_alloc(ctx_, array_name.c_str(), &array);
+    CHECK(rc == TILEDB_OK);
+    tiledb_config_t* cfg;
+    tiledb_error_t* err = nullptr;
+    REQUIRE(tiledb_config_alloc(&cfg, &err) == TILEDB_OK);
+    REQUIRE(err == nullptr);
+    rc = tiledb_config_set(
+        cfg, "sm.encryption_type", "TILEDB_AES_256_GCM", &err);
+    REQUIRE(rc == TILEDB_OK);
+    REQUIRE(err == nullptr);
+    rc = tiledb_config_set(cfg, "sm.encryption_key", key, &err);
+    REQUIRE(rc == TILEDB_OK);
+    REQUIRE(err == nullptr);
+    rc = tiledb_config_set(
+        cfg, "sm.encryption_key_length", std::to_string(key_len).c_str(), &err);
+    REQUIRE(rc == TILEDB_OK);
+    REQUIRE(err == nullptr);
+    rc = tiledb_array_set_config(ctx_, array, cfg);
+    REQUIRE(rc == TILEDB_OK);
+
+    rc = tiledb_array_schema_load(ctx_, array_name.c_str(), &read_schema);
     REQUIRE(rc == TILEDB_OK);
 
     // Check opening after closing still requires a key.
