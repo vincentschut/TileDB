@@ -241,7 +241,6 @@ void check_save_to_file() {
   ss << "sm.dedup_coords false\n";
   ss << "sm.enable_signal_handlers true\n";
   ss << "sm.encryption_key 0\n";
-  ss << "sm.encryption_key_length 0\n";
   ss << "sm.encryption_type NO_ENCRYPTION\n";
   ss << "sm.io_concurrency_level " << std::thread::hardware_concurrency()
      << "\n";
@@ -533,7 +532,6 @@ TEST_CASE("C API: Test config iter", "[capi], [config]") {
   all_param_values["sm.array.timestamp_start"] = "0";
   all_param_values["sm.array.timestamp_end"] = std::to_string(UINT64_MAX);
   all_param_values["sm.encryption_key"] = "0";
-  all_param_values["sm.encryption_key_length"] = "0";
   all_param_values["sm.encryption_type"] = "NO_ENCRYPTION";
   all_param_values["sm.dedup_coords"] = "false";
   all_param_values["sm.check_coord_dups"] = "true";

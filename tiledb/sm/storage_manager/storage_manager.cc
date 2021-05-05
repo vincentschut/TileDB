@@ -47,6 +47,7 @@
 #include "tiledb/sm/filesystem/vfs.h"
 #include "tiledb/sm/fragment/fragment_info.h"
 #include "tiledb/sm/global_state/global_state.h"
+#include "tiledb/sm/global_state/unit_test_config.h"
 #include "tiledb/sm/misc/parallel_functions.h"
 #include "tiledb/sm/misc/utils.h"
 #include "tiledb/sm/misc/uuid.h"
@@ -540,6 +541,7 @@ Status StorageManager::array_consolidate(
     encryption_key_from_cfg = config->get("sm.encryption_key", &found);
     assert(found);
   }
+
   if (!encryption_key_from_cfg.empty()) {
     encryption_key = encryption_key_from_cfg.c_str();
     std::string encryption_type_from_cfg;
@@ -548,6 +550,19 @@ Status StorageManager::array_consolidate(
     assert(found);
     RETURN_NOT_OK(
         encryption_type_enum(encryption_type_from_cfg, &encryption_type));
+
+    if (EncryptionKey::is_valid_key_length(
+            encryption_type, encryption_key_from_cfg.size())) {
+      const UnitTestConfig& unit_test_cfg = UnitTestConfig::instance();
+      if (unit_test_cfg.array_encryption_key_length.is_set()) {
+        key_length = unit_test_cfg.array_encryption_key_length.get();
+      } else {
+        key_length = encryption_key_from_cfg.size();
+      }
+    } else {
+      encryption_key = nullptr;
+      key_length = 0;
+    }
   }
 
   // Consolidate
@@ -747,6 +762,7 @@ Status StorageManager::array_metadata_consolidate(
     encryption_key_from_cfg = config->get("sm.encryption_key", &found);
     assert(found);
   }
+
   if (!encryption_key_from_cfg.empty()) {
     encryption_key = encryption_key_from_cfg.c_str();
     std::string encryption_type_from_cfg;
@@ -755,6 +771,19 @@ Status StorageManager::array_metadata_consolidate(
     assert(found);
     RETURN_NOT_OK(
         encryption_type_enum(encryption_type_from_cfg, &encryption_type));
+
+    if (EncryptionKey::is_valid_key_length(
+            encryption_type, encryption_key_from_cfg.size())) {
+      const UnitTestConfig& unit_test_cfg = UnitTestConfig::instance();
+      if (unit_test_cfg.array_encryption_key_length.is_set()) {
+        key_length = unit_test_cfg.array_encryption_key_length.get();
+      } else {
+        key_length = encryption_key_from_cfg.size();
+      }
+    } else {
+      encryption_key = nullptr;
+      key_length = 0;
+    }
   }
 
   // Consolidate
@@ -792,50 +821,44 @@ Status StorageManager::array_create(
   URI array_metadata_uri =
       array_uri.join_path(constants::array_metadata_folder_name);
   RETURN_NOT_OK(vfs_->create_dir(array_metadata_uri));
-
-  std::string encryption_key_from_cfg;
-  std::string encryption_type_from_cfg;
-  EncryptionType encryption_type_cfg;
-  EncryptionKey encryption_key_cfg;
   Status st;
 
   // Get encryption key from config
   if (encryption_key.encryption_type() == EncryptionType::NO_ENCRYPTION) {
     bool found = false;
-    encryption_key_from_cfg = config_.get("sm.encryption_key", &found);
+    std::string encryption_key_from_cfg =
+        config_.get("sm.encryption_key", &found);
     assert(found);
-    found = false;
-    encryption_type_from_cfg = config_.get("sm.encryption_type", &found);
+    std::string encryption_type_from_cfg =
+        config_.get("sm.encryption_type", &found);
     assert(found);
+    EncryptionType encryption_type_cfg;
     RETURN_NOT_OK(
         encryption_type_enum(encryption_type_from_cfg, &encryption_type_cfg));
+    EncryptionKey encryption_key_cfg;
 
     if (encryption_key_from_cfg.empty()) {
-      encryption_key_cfg.set_key(EncryptionType::NO_ENCRYPTION, nullptr, 0);
+      RETURN_NOT_OK(
+          encryption_key_cfg.set_key(encryption_type_cfg, nullptr, 0));
     } else {
-      Config config = config_;
-      uint32_t key_length_from_cfg;
-      RETURN_NOT_OK(config.get<uint32_t>(
-          "sm.encryption_key_length", &key_length_from_cfg, &found));
-      assert(found);
-      if (encryption_key.is_valid_key_length(encryption_type_cfg, key_length)) {
-        encryption_key_cfg.set_key(
-            encryption_type_cfg,
-            (const void*)encryption_key_from_cfg.c_str(),
-            key_length);
+      uint32_t key_length = 0;
+      if (EncryptionKey::is_valid_key_length(
+              encryption_type_cfg, encryption_key_from_cfg.size())) {
+        const UnitTestConfig& unit_test_cfg = UnitTestConfig::instance();
+        if (unit_test_cfg.array_encryption_key_length.is_set()) {
+          key_length = unit_test_cfg.array_encryption_key_length.get();
+        } else {
+          key_length = encryption_key_from_cfg.size();
+        }
       }
+      RETURN_NOT_OK(encryption_key_cfg.set_key(
+          encryption_type_cfg,
+          (const void*)encryption_key_from_cfg.c_str(),
+          key_length));
     }
     st = store_array_schema(array_schema, encryption_key_cfg);
-    Config config = config_;
-    found = false;
-    std::string cfg_type = config.get("sm.encryption_type", &found);
-    ;
   } else {
     st = store_array_schema(array_schema, encryption_key);
-    Config config = config_;
-    bool found = false;
-    std::string cfg_type = config.get("sm.encryption_type", &found);
-    ;
   }
 
   // Store array schema
@@ -1292,64 +1315,28 @@ Status StorageManager::object_move(
 }
 
 Status StorageManager::get_fragment_info(
-    const URI& array_uri,
+    const Array& array,
     uint64_t timestamp_start,
     uint64_t timestamp_end,
-    const EncryptionKey& encryption_key,
     FragmentInfo* fragment_info,
     bool get_to_vacuum) {
   fragment_info->clear();
 
   // Open array for reading
-  auto array_schema = (ArraySchema*)nullptr;
-  std::vector<FragmentMetadata*> fragment_metadata;
-
-  std::string encryption_key_from_cfg;
-  std::string encryption_type_from_cfg;
-  EncryptionType encryption_type;
-  EncryptionKey encryption_key_cfg;
-
-  // Get encryption key from config
-  if (encryption_key.encryption_type() == EncryptionType::NO_ENCRYPTION) {
-    bool found = false;
-    encryption_key_from_cfg = config_.get("sm.encryption_key", &found);
-    assert(found);
-    found = false;
-    encryption_type_from_cfg = config_.get("sm.encryption_type", &found);
-    assert(found);
-    encryption_type_enum(encryption_type_from_cfg, &encryption_type);
-
-    if (encryption_key_from_cfg.empty()) {
-      encryption_key_cfg.set_key(encryption_type, nullptr, 0);
-    } else {
-      uint32_t key_length = (uint32_t)encryption_key_from_cfg.length();
-      if (encryption_key.is_valid_key_length(
-              encryption_key.encryption_type(), key_length)) {
-        encryption_key_cfg.set_key(
-            encryption_type,
-            (const void*)encryption_key_from_cfg.c_str(),
-            key_length);
-      }
-    }
-    RETURN_NOT_OK(array_open_for_reads(
-        array_uri,
-        encryption_key_cfg,
-        &array_schema,
-        &fragment_metadata,
-        timestamp_start,
-        timestamp_end));
-  } else {
-    RETURN_NOT_OK(array_open_for_reads(
-        array_uri,
-        encryption_key,
-        &array_schema,
-        &fragment_metadata,
-        timestamp_start,
-        timestamp_end));
-  }
+  auto array_schema = array.array_schema();
+  auto array_type = array_schema->array_type();
 
   fragment_info->set_dim_info(
       array_schema->dim_names(), array_schema->dim_types());
+
+  std::vector<FragmentMetadata*> fragment_metadata;
+  RETURN_NOT_OK(array_reopen(
+      array.array_uri(),
+      *array.encryption_key(),
+      &array_schema,
+      &fragment_metadata,
+      array_type == ArrayType::SPARSE ? timestamp_start : 0,
+      timestamp_end));
 
   // Return if array is empty
   if (fragment_metadata.empty())
@@ -1708,38 +1695,38 @@ Status StorageManager::load_array_schema(
   GenericTileIO tile_io(this, schema_uri);
   Tile* tile = nullptr;
 
-  std::string encryption_key_from_cfg;
-  std::string encryption_type_from_cfg;
-  EncryptionType encryption_type;
-  EncryptionKey encryption_key_cfg;
-
   // Get encryption key from config
   if (encryption_key.encryption_type() == EncryptionType::NO_ENCRYPTION) {
     bool found = false;
-    encryption_key_from_cfg = config_.get("sm.encryption_key", &found);
+    std::string encryption_key_from_cfg =
+        config_.get("sm.encryption_key", &found);
     assert(found);
-    found = false;
-    encryption_type_from_cfg = config_.get("sm.encryption_type", &found);
+    std::string encryption_type_from_cfg =
+        config_.get("sm.encryption_type", &found);
     assert(found);
-    encryption_type_enum(encryption_type_from_cfg, &encryption_type);
+    EncryptionType encryption_type_cfg;
+    RETURN_NOT_OK(
+        encryption_type_enum(encryption_type_from_cfg, &encryption_type_cfg));
+    EncryptionKey encryption_key_cfg;
 
     if (encryption_key_from_cfg.empty()) {
-      encryption_key_cfg.set_key(encryption_type, nullptr, 0);
-      // std::cerr<< "EMPTY" << std::endl;
+      RETURN_NOT_OK(
+          encryption_key_cfg.set_key(encryption_type_cfg, nullptr, 0));
     } else {
-      // std::cerr << "NOT_EMPTY" <<std::endl;
-      uint32_t key_length = 1;
-      RETURN_NOT_OK(config_.get<uint32_t>(
-          "sm.encryption_key_length", &key_length, &found));
-      assert(found);
-      //(uint32_t)encryption_key_from_cfg.length();
-      if (encryption_key.is_valid_key_length(
-              encryption_key.encryption_type(), key_length)) {
-        encryption_key_cfg.set_key(
-            encryption_type,
-            (const void*)encryption_key_from_cfg.c_str(),
-            key_length);
+      uint32_t key_length = 0;
+      if (EncryptionKey::is_valid_key_length(
+              encryption_type_cfg, encryption_key_from_cfg.size())) {
+        const UnitTestConfig& unit_test_cfg = UnitTestConfig::instance();
+        if (unit_test_cfg.array_encryption_key_length.is_set()) {
+          key_length = unit_test_cfg.array_encryption_key_length.get();
+        } else {
+          key_length = encryption_key_from_cfg.size();
+        }
       }
+      RETURN_NOT_OK(encryption_key_cfg.set_key(
+          encryption_type_cfg,
+          (const void*)encryption_key_from_cfg.c_str(),
+          key_length));
     }
     RETURN_NOT_OK(tile_io.read_generic(&tile, 0, encryption_key_cfg, config_));
   } else {

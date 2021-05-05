@@ -106,11 +106,6 @@ class Config {
   static const std::string SM_ENCRYPTION_KEY;
 
   /**
-   * The key length for encrypted arrays.
-   *  */
-  static const std::string SM_ENCRYPTION_KEY_LENGTH;
-
-  /**
    * The type of encryption used for encrypted arrays.
    *  */
   static const std::string SM_ENCRYPTION_TYPE;

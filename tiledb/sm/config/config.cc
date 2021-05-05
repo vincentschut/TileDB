@@ -66,7 +66,6 @@ const std::string Config::REST_RETRY_DELAY_FACTOR = "1.25";
 const std::string Config::SM_ARRAY_TIMESTAMP_START = "0";
 const std::string Config::SM_ARRAY_TIMESTAMP_END = std::to_string(UINT64_MAX);
 const std::string Config::SM_ENCRYPTION_KEY = "0";
-const std::string Config::SM_ENCRYPTION_KEY_LENGTH = "0";
 const std::string Config::SM_ENCRYPTION_TYPE = "NO_ENCRYPTION";
 const std::string Config::SM_DEDUP_COORDS = "false";
 const std::string Config::SM_CHECK_COORD_DUPS = "true";
@@ -203,7 +202,6 @@ Config::Config() {
   param_values_["sm.array.timestamp_start"] = SM_ARRAY_TIMESTAMP_START;
   param_values_["sm.array.timestamp_end"] = SM_ARRAY_TIMESTAMP_END;
   param_values_["sm.encryption_key"] = SM_ENCRYPTION_KEY;
-  param_values_["sm.encryption_key_length"] = SM_ENCRYPTION_KEY_LENGTH;
   param_values_["sm.encryption_type"] = SM_ENCRYPTION_TYPE;
   param_values_["sm.dedup_coords"] = SM_DEDUP_COORDS;
   param_values_["sm.check_coord_dups"] = SM_CHECK_COORD_DUPS;
@@ -693,8 +691,6 @@ Status Config::sanity_check(
     RETURN_NOT_OK(utils::parse::convert(value, &vuint64));
   } else if (param == "sm.array.timestamp_end") {
     RETURN_NOT_OK(utils::parse::convert(value, &vuint64));
-  } else if (param == "sm.encryption_key_length") {
-    RETURN_NOT_OK(utils::parse::convert(value, &v32));
   } else if (param == "sm.dedup_coords") {
     RETURN_NOT_OK(utils::parse::convert(value, &v));
   } else if (param == "sm.check_coord_dups") {

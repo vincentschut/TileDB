@@ -507,12 +507,12 @@ class StorageManager {
    * Gets the fragment information for a given array at a particular
    * timestamp.
    *
-   * @param array_schema The array schema.
+   * @param array The array.
    * @param timestamp_start The function will consider fragments created
    *     at or after this timestamp.
    * @param timestamp_end The function will consider fragments created
    *     at or before this timestamp.
-   * @param encryption_key The encryption key in case the array is encrypted.
+   * @param encryption_key The encryption key in case the array is .
    * @param fragment_info The fragment information to be retrieved.
    *     The fragments are sorted in chronological creation order.
    * @param get_to_vacuum Whether or not to receive information about
@@ -520,34 +520,9 @@ class StorageManager {
    * @return Status
    */
   Status get_fragment_info(
-      const ArraySchema* array_schema,
+      const Array& array,
       uint64_t timestamp_start,
       uint64_t timestamp_end,
-      const EncryptionKey& encryption_key,
-      FragmentInfo* fragment_info,
-      bool get_to_vacuum = false);
-
-  /**
-   * Gets the fragment information for a given array at a particular
-   * timestamp.
-   *
-   * @param array_uri The array URI.
-   * @param timestamp_start The function will consider fragments created
-   *     at or after this timestamp.
-   * @param timestamp_end The function will consider fragments created
-   *     at or before this timestamp.
-   * @param encryption_key The encryption key in case the array is encrypted.
-   * @param fragment_info The fragment information to be retrieved.
-   *     The fragments are sorted in chronological creation order.
-   * @param get_to_vacuum Whether or not to receive information about
-   *     fragments to vacuum.
-   * @return Status
-   */
-  Status get_fragment_info(
-      const URI& array_uri,
-      uint64_t timestamp_start,
-      uint64_t timestamp_end,
-      const EncryptionKey& encryption_key,
       FragmentInfo* fragment_info,
       bool get_to_vacuum = false);
 
