@@ -43,6 +43,7 @@ using namespace tiledb::common;
 
 FragmentInfo::FragmentInfo()
     : storage_manager_(nullptr)
+    , array_(nullptr)
     , unconsolidated_metadata_num_(0) {
 }
 
@@ -50,10 +51,12 @@ FragmentInfo::FragmentInfo(
     const URI& array_uri, StorageManager* storage_manager)
     : array_uri_(array_uri)
     , storage_manager_(storage_manager)
+    , array_(tdb_new(Array, array_uri_, storage_manager_))
     , unconsolidated_metadata_num_(0) {
 }
 
 FragmentInfo::~FragmentInfo() {
+  tdb_delete(array_);
 }
 
 FragmentInfo::FragmentInfo(const FragmentInfo& fragment_info)
@@ -692,13 +695,13 @@ Status FragmentInfo::load(
     return LOG_STATUS(Status::FragmentInfoError(msg));
   }
 
-  array_ = tdb_make_shared(Array, array_uri_, storage_manager_);
-  RETURN_NOT_OK(array_->open_without_fragments(
-      encryption_type, encryption_key, key_length));
+  if (!array_->is_open())
+    RETURN_NOT_OK(array_->open_without_fragments(
+        encryption_type, encryption_key, key_length));
 
   auto timestamp = utils::time::timestamp_now_ms();
   RETURN_NOT_OK_ELSE(
-      storage_manager_->get_fragment_info(*array_, 0, timestamp, this, true),
+      storage_manager_->get_fragment_info(array_, 0, timestamp, this, true),
       array_->close());
 
   unconsolidated_metadata_num_ = 0;
