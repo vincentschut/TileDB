@@ -1071,7 +1071,7 @@ uint64_t Dimension::map_to_uint64(
 
   double dom_start_T = *(const T*)dim->domain().start();
   double dom_end_T = *(const T*)dim->domain().end();
-  auto dom_range_T = dom_end_T - dom_start_T + std::is_integral<T>::value;
+  auto dom_range_T = dom_end_T - dom_start_T;
   auto norm_coord_T = ((const T*)buff->buffer_)[c] - dom_start_T;
   return (norm_coord_T / dom_range_T) * bucket_num;
 }
@@ -1136,7 +1136,7 @@ uint64_t Dimension::map_to_uint64_2(
 
   double dom_start_T = *(const T*)dim->domain().start();
   double dom_end_T = *(const T*)dim->domain().end();
-  auto dom_range_T = dom_end_T - dom_start_T + std::is_integral<T>::value;
+  auto dom_range_T = dom_end_T - dom_start_T;
   auto norm_coord_T = *(const T*)coord - dom_start_T;
   return (norm_coord_T / dom_range_T) * bucket_num;
 }
@@ -1192,7 +1192,7 @@ uint64_t Dimension::map_to_uint64_3(
 
   double dom_start_T = *(const T*)dim->domain().start();
   double dom_end_T = *(const T*)dim->domain().end();
-  auto dom_range_T = dom_end_T - dom_start_T + std::is_integral<T>::value;
+  auto dom_range_T = dom_end_T - dom_start_T;
   auto norm_coord_T = *((const T*)coord.coord(dim_idx)) - dom_start_T;
   return (norm_coord_T / dom_range_T) * bucket_num;
 }
@@ -1246,7 +1246,7 @@ ByteVecValue Dimension::map_from_uint64(
 
   auto dom_start_T = *(const T*)dim->domain().start();
   auto dom_end_T = *(const T*)dim->domain().end();
-  double dom_range_T = dom_end_T - dom_start_T + std::is_integral<T>::value;
+  double dom_range_T = dom_end_T - dom_start_T;
 
   // Essentially take the largest value in the bucket
   if (std::is_integral<T>::value) {  // Integers
