@@ -270,6 +270,8 @@ class QueryCondition {
    *
    * @param clause The clause to apply.
    * @param stride The stride between cells.
+   * @param var_size The attribute is var sized or not.
+   * @param nullable The attribute is nullable or not.
    * @param fill_value The fill value for the cells.
    * @param result_cell_slabs The input cell slabs.
    * @param out_result_cell_slabs The filtered cell slabs.
@@ -278,6 +280,8 @@ class QueryCondition {
   void apply_clause(
       const Clause& clause,
       uint64_t stride,
+      const bool var_size,
+      const bool nullable,
       const ByteVecValue& fill_value,
       const std::vector<ResultCellSlab>& result_cell_slabs,
       std::vector<ResultCellSlab>* out_result_cell_slabs) const;
@@ -287,6 +291,8 @@ class QueryCondition {
    *
    * @param clause The clause to apply.
    * @param stride The stride between cells.
+   * @param var_size The attribute is var sized or not.
+   * @param nullable The attribute is nullable or not.
    * @param fill_value The fill value for the cells.
    * @param result_cell_slabs The input cell slabs.
    * @param out_result_cell_slabs The filtered cell slabs.
@@ -295,6 +301,8 @@ class QueryCondition {
   Status apply_clause(
       const Clause& clause,
       uint64_t stride,
+      const bool var_size,
+      const bool nullable,
       const ByteVecValue& fill_value,
       const std::vector<ResultCellSlab>& result_cell_slabs,
       std::vector<ResultCellSlab>* out_result_cell_slabs) const;
